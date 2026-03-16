@@ -11,6 +11,10 @@ FetchContent_Declare(SFML
 )
 FetchContent_MakeAvailable(SFML)
 
-add_executable(TypingGame main.cpp)
+add_executable(TypingGame main.cpp
+        Stats.h
+        Stats.cpp
+        Game.h
+        Game.cpp)
 
 target_link_libraries(TypingGame PRIVATE sfml-graphics sfml-window sfml-system)
