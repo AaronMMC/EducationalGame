@@ -2,16 +2,23 @@
 #include <algorithm>
 
 void Stats::start() {
-    startTime = std::chrono::steady_clock::now();
-    isFinished = false;
-    totalTyped = 0;
-    errors = 0;
+    startTime    = std::chrono::steady_clock::now();
+    isFinished   = false;
+    totalTyped   = 0;
+    errors       = 0;
     correctChars = 0;
 }
 
 void Stats::finish() {
-    endTime = std::chrono::steady_clock::now();
+    endTime    = std::chrono::steady_clock::now();
     isFinished = true;
+}
+
+void Stats::reset() {
+    totalTyped   = 0;
+    errors       = 0;
+    correctChars = 0;
+    isFinished   = false;
 }
 
 float Stats::getElapsedSeconds() {
@@ -26,7 +33,7 @@ float Stats::getRemainingTime() {
 
 int Stats::getWPM() {
     float minutes = getElapsedSeconds() / 60.0f;
-    if (minutes <= 0) return 0;
+    if (minutes <= 0.0f) return 0;
     return static_cast<int>((correctChars / 5.0f) / minutes);
 }
 
