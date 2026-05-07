@@ -3,14 +3,15 @@
 #include <cmath>
 
 void ResultScreen::onEnter(GameState& gs) { enterAnim = 0.f; }
+
 void ResultScreen::update(float dt, GameState& gs) {
     enterAnim = std::min(1.f, enterAnim + dt * 2.5f);
 }
+
 void ResultScreen::handleEvent(sf::Event& event, GameState& gs) {
     if (event.type == sf::Event::MouseButtonPressed &&
         event.mouseButton.button == sf::Mouse::Left) {
         sf::Vector2i m(event.mouseButton.x, event.mouseButton.y);
-        // FIX #2: For Endless mode, "Play Again" re-enters the game with the next wave
         if (gs.mode == GameMode::Endless) {
             if (m.x >= 300 && m.x <= 500 && m.y >= 430 && m.y <= 475) {
                 gs.resetMatch();
@@ -21,13 +22,14 @@ void ResultScreen::handleEvent(sf::Event& event, GameState& gs) {
                 gs.currentScreen = Screen::Title;
         }
     }
-    if (event.type == sf::Event::KeyPressed &&
-        event.key.code == sf::Keyboard::Enter) {
-        if (gs.mode == GameMode::Endless) {
-            gs.resetMatch();
-            gs.currentScreen = Screen::Game;
-        } else {
-            gs.currentScreen = Screen::Title;
+    if (event.type == sf::Event::KeyPressed) {
+        if (event.key.code == sf::Keyboard::Enter || event.key.code == sf::Keyboard::Escape) {
+            if (gs.mode == GameMode::Endless) {
+                gs.resetMatch();
+                gs.currentScreen = Screen::Game;
+            } else {
+                gs.currentScreen = Screen::Title;
+            }
         }
     }
 }
@@ -40,8 +42,7 @@ void ResultScreen::draw(sf::RenderWindow& w, GameState& gs) {
     w.draw(overlay);
 
     float scale = 0.85f + 0.15f * enterAnim;
-
-    bool isVS = (gs.mode == GameMode::VS);
+    bool isVS      = (gs.mode == GameMode::VS);
     bool isEndless = (gs.mode == GameMode::Endless);
 
     std::string titleStr;
@@ -69,7 +70,8 @@ void ResultScreen::draw(sf::RenderWindow& w, GameState& gs) {
     UI::centerText(scoreT, 400.f, 230.f);
     UI::drawGlowText(w, scoreT, UI::ACCENT3, 5.f);
 
-    UI::drawPanel(w, 200.f, 290.f, 400.f, 120.f, sf::Color(UI::ACCENT.r,UI::ACCENT.g,UI::ACCENT.b,80), UI::BG2, 12.f);
+    UI::drawPanel(w, 200.f, 290.f, 400.f, 120.f,
+                  sf::Color(UI::ACCENT.r, UI::ACCENT.g, UI::ACCENT.b, 80), UI::BG2, 12.f);
 
     auto stat = [&](float x, float y, const std::string& label, const std::string& val, sf::Color col) {
         sf::Text l = UI::makeText(label, gs.fontMono, 11, UI::TEXT2);
@@ -80,7 +82,6 @@ void ResultScreen::draw(sf::RenderWindow& w, GameState& gs) {
         w.draw(v);
     };
 
-    // FIX #7: show match-total stats (best WPM across rounds, total accuracy)
     int matchAcc = (gs.matchTotalTyped > 0)
         ? (int)((float)gs.matchCorrectChars / gs.matchTotalTyped * 100.f)
         : gs.stats.getAccuracy();
@@ -94,11 +95,11 @@ void ResultScreen::draw(sf::RenderWindow& w, GameState& gs) {
         stat(450, 352, "OPP HP",   std::to_string((int)gs.oppHP),    UI::ACCENT2);
     }
 
-    // FIX #2: button label changes for Endless mode
     sf::Vector2i m = sf::Mouse::getPosition(w);
     bool hov = (m.x >= 300 && m.x <= 500 && m.y >= 430 && m.y <= 475);
-    UI::drawPanel(w, 300, 430, 200, 45, hov ? UI::ACCENT : sf::Color(UI::ACCENT.r,UI::ACCENT.g,UI::ACCENT.b,140),
-                  hov ? sf::Color(0,240,255,20) : UI::BG2, 8.f);
+    UI::drawPanel(w, 300, 430, 200, 45,
+                  hov ? UI::ACCENT : sf::Color(UI::ACCENT.r, UI::ACCENT.g, UI::ACCENT.b, 140),
+                  hov ? sf::Color(0, 240, 255, 20) : UI::BG2, 8.f);
     std::string btnLabel = isEndless ? "NEXT WAVE" : "BACK TO HQ";
     sf::Text back = UI::makeText(btnLabel, gs.fontOrb, 13, hov ? UI::ACCENT : UI::TEXT2);
     UI::centerText(back, 400.f, 452.f);

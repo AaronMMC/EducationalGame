@@ -8,7 +8,7 @@ public:
     int correctChars  = 0;
     float timeLimit   = 60.0f;
     bool isFinished   = false;
-    bool isStarted    = false;   // FIX #5: track whether start() was called
+    bool isStarted    = false;
 
     std::chrono::time_point<std::chrono::steady_clock> startTime;
     std::chrono::time_point<std::chrono::steady_clock> endTime;

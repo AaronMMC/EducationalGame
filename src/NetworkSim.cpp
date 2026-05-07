@@ -15,9 +15,8 @@ void NetworkSim::reset(int avId, bool frozenStart) {
     virusTimer    = 0.f;
     glitchTimer   = 0.f;
     started       = false;
-    lastMilestone = 0;          // FIX #4: reset milestone tracker
+    lastMilestone = 0;
     sabotageIndices.clear();
-    // Random speed between ~35 and ~65 WPM equivalent (chars/sec)
     oppSpeed  = (35.f + (std::rand() % 30)) / 60.f * 5.f;
     connected = true;
 }
@@ -44,7 +43,6 @@ float NetworkSim::tick(float dt, int textLen, bool localPlayerFrozen) {
 
         multiplier = std::min(multiplier + 0.01f * dt, 4.f);
 
-        // FIX #4: use integer milestone tracking instead of modulo on float
         int currentMilestone = (int)charsTyped / 15;
         if (currentMilestone > lastMilestone && charsTyped > 1.f) {
             lastMilestone = currentMilestone;
@@ -52,8 +50,7 @@ float NetworkSim::tick(float dt, int textLen, bool localPlayerFrozen) {
         }
     }
 
-    // Virus ability: inject sabotage indices onto local screen
-    if (avatarId == 2) {
+    if (avatarId == 2) { // VIRUS
         virusTimer += dt;
         if (virusTimer >= 2.f) {
             virusTimer = 0.f;

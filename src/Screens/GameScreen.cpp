@@ -7,7 +7,6 @@
 #include <sstream>
 #include <random>
 
-// ── Keyword colors for syntax highlighting ────────────────────────────────────
 static const std::vector<std::pair<std::string, sf::Color>> KEYWORDS = {
     {"int ",     {198, 120, 221}},
     {"void ",    {198, 120, 221}},
@@ -25,7 +24,6 @@ static const std::vector<std::pair<std::string, sf::Color>> KEYWORDS = {
 };
 static const char GLITCH_CHARS[] = "@#$%&*?!~^";
 
-// FIX #11: per-index stable glitch chars, refreshed on a timer not every frame
 static std::vector<char> glitchCharCache;
 static float             glitchRefreshTimer = 0.f;
 
@@ -35,7 +33,6 @@ static void refreshGlitchCache(int textLen) {
         glitchCharCache[i] = GLITCH_CHARS[std::rand() % (sizeof(GLITCH_CHARS) - 1)];
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 static std::vector<sf::Color> buildBaseColors(const std::string& text) {
     std::vector<sf::Color> colors(text.size(), UI::TEXT3);
     for (const auto& kw : KEYWORDS) {
@@ -54,7 +51,6 @@ static std::vector<sf::Color> buildBaseColors(const std::string& text) {
     return colors;
 }
 
-// ── IScreen ───────────────────────────────────────────────────────────────────
 void GameScreen::onEnter(GameState& gs) {
     if (gs.mode != GameMode::VS) gs.resetMatch();
     cursorPhase    = 0.f;
@@ -64,8 +60,6 @@ void GameScreen::onEnter(GameState& gs) {
     phoenixNotice  = false;
     phoenixTimer   = 0.f;
 
-    // FIX #8: Apply Sentinel freeze NOW (when the game screen actually appears),
-    // not during resetMatch() which runs during the VS countdown.
     if (gs.mode == GameMode::VS) {
         auto avatars = Avatar::all();
         if (avatars[gs.profile.avatarId].ability == AvatarAbility::Starter) {
@@ -74,7 +68,6 @@ void GameScreen::onEnter(GameState& gs) {
         }
     }
 
-    // Initialise glitch cache
     refreshGlitchCache((int)gs.targetText.size());
     glitchRefreshTimer = 0.f;
 }
@@ -85,8 +78,8 @@ void GameScreen::handleEvent(sf::Event& event, GameState& gs) {
 
     if (event.type == sf::Event::TextEntered) {
         sf::Uint32 uni = event.text.unicode;
-        if (uni == 27) return; // ESC
-        if (uni == 13) uni = 10; // Enter -> newline
+        if (uni == 27) return;
+        if (uni == 13) uni = 10;
         processChar(uni, gs);
     }
     if (event.type == sf::Event::KeyPressed) {
@@ -96,13 +89,15 @@ void GameScreen::handleEvent(sf::Event& event, GameState& gs) {
         if (event.key.code == sf::Keyboard::BackSpace && !gs.typedText.empty()) {
             gs.typedText.pop_back();
         }
+        if (event.key.code == sf::Keyboard::Escape) {
+            gs.currentScreen = Screen::Title;
+        }
     }
 }
 
 void GameScreen::processChar(sf::Uint32 uni, GameState& gs) {
     if (uni < 32 && uni != 10) return;
 
-    // FIX #1: start the clock only (counters were already reset in resetMatch/nextRound)
     if (!gs.roundStarted) startRound(gs);
 
     if (gs.typedText.size() < gs.targetText.size()) {
@@ -125,14 +120,13 @@ void GameScreen::processChar(sf::Uint32 uni, GameState& gs) {
 
 void GameScreen::startRound(GameState& gs) {
     gs.roundStarted = true;
-    gs.stats.start(); // FIX #1: start() only sets the clock now, doesn't reset counters
+    gs.stats.start();
     if (gs.mode == GameMode::VS) gs.opponent.connect();
 }
 
 void GameScreen::checkRoundComplete(GameState& gs) {
     if (gs.typedText.size() < gs.targetText.size()) return;
 
-    // FIX #7: accumulate this round's stats into match totals before resetting
     gs.matchTotalTyped   += gs.stats.totalTyped;
     gs.matchCorrectChars += gs.stats.correctChars;
     gs.matchErrors       += gs.stats.errors;
@@ -150,7 +144,7 @@ void GameScreen::checkRoundComplete(GameState& gs) {
 void GameScreen::nextRound(GameState& gs) {
     gs.round++;
     gs.roundStarted = false;
-    gs.stats.reset();      // FIX #1: reset counters here, not inside start()
+    gs.stats.reset();
     gs.stats.timeLimit = gs.settings.timeLimit;
     gs.typedText = "";
     gs.obfuscatedIndices.clear();
@@ -159,12 +153,17 @@ void GameScreen::nextRound(GameState& gs) {
 
     refreshGlitchCache((int)gs.targetText.size());
 
-    // Phoenix R3 notice
     auto avatars = Avatar::all();
     if (avatars[gs.profile.avatarId].ability == AvatarAbility::Comeback && gs.round == 3) {
         gs.multiplier = std::max(gs.multiplier, 3.f);
         phoenixNotice = true;
         phoenixTimer  = 2.5f;
+    }
+
+    // Re-apply Sentinel freeze for new round
+    if (avatars[gs.profile.avatarId].ability == AvatarAbility::Starter) {
+        gs.frozenUntil    = std::chrono::steady_clock::now() + std::chrono::seconds(4);
+        gs.opponentFrozen = true;
     }
 }
 
@@ -172,7 +171,6 @@ void GameScreen::endMatch(GameState& gs) {
     gs.stats.finish();
     gs.matchFinished = true;
 
-    // FIX #7: use match totals when updating profile bests
     if (gs.matchBestWpm > gs.profile.bestWpm)  gs.profile.bestWpm = gs.matchBestWpm;
     if (gs.score > gs.profile.bestScore)        gs.profile.bestScore = (int)gs.score;
     gs.profile.gamesPlayed++;
@@ -182,11 +180,8 @@ void GameScreen::endMatch(GameState& gs) {
         if (gs.playerWon) gs.profile.wins++;
         else              gs.profile.losses++;
     } else if (gs.mode == GameMode::Endless) {
-        // FIX #2: advance wave and loop back for endless mode
         gs.wave++;
         gs.playerWon = true;
-        gs.currentScreen = Screen::Result;
-        return;
     } else {
         gs.playerWon = true;
     }
@@ -197,7 +192,6 @@ void GameScreen::endMatch(GameState& gs) {
 void GameScreen::update(float dt, GameState& gs) {
     cursorPhase += dt * 4.f;
 
-    // FIX #11: refresh glitch chars every 0.15s instead of every frame
     glitchRefreshTimer += dt;
     if (glitchRefreshTimer >= 0.15f) {
         glitchRefreshTimer = 0.f;
@@ -281,7 +275,6 @@ void GameScreen::drawHUD(sf::RenderWindow& w, GameState& gs) {
     p1hpn.setPosition(218, 28);
     w.draw(p1hpn);
 
-    // FIX #5: getRemainingTime() is now safe before start() thanks to isStarted guard
     float rem = gs.stats.getRemainingTime();
     sf::Color timerCol = rem > 20.f ? UI::ACCENT3 : rem > 10.f ? UI::ORANGE : UI::RED;
     sf::Text timer = UI::makeText(std::to_string((int)std::ceil(rem)), gs.fontOrb, 28, timerCol);
@@ -374,7 +367,6 @@ void GameScreen::drawTypingArea(sf::RenderWindow& w, GameState& gs) {
         charT.setCharacterSize(18);
         charT.setPosition(cx, cy);
 
-        // FIX #11: use cached glitch char (refreshed every 0.15s), not rand() per frame
         bool isObs = gs.obfuscatedIndices.count((int)i) && i >= gs.typedText.size();
         if (isObs && gs.settings.glitchEffects) {
             char gc = (i < glitchCharCache.size()) ? glitchCharCache[i] : '@';

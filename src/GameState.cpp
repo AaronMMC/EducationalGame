@@ -4,23 +4,27 @@
 #include <cmath>
 #include <chrono>
 
+const sf::Color GameState::ACCENT_COLORS[] = {
+    {0, 240, 255}, {255, 60, 110}, {240, 192, 0},
+    {123, 47, 255}, {0, 230, 118}, {255, 145, 0}
+};
+
 void GameState::resetMatch() {
-    round          = 1;
-    playerHP       = 100.f;
-    oppHP          = 100.f;
-    score          = 0;
-    multiplier     = 1.f;
-    comboStreak    = 0;
-    roundStarted   = false;
-    matchFinished  = false;
-    playerWon      = false;
-    isBossWave     = mode == GameMode::Endless && (wave % 10 == 0);
+    round         = 1;
+    playerHP      = 100.f;
+    oppHP         = 100.f;
+    score         = 0;
+    multiplier    = 1.f;
+    comboStreak   = 0;
+    roundStarted  = false;
+    matchFinished = false;
+    playerWon     = false;
+    isBossWave    = mode == GameMode::Endless && (wave % 10 == 0);
     obfuscatedIndices.clear();
     opponentFrozen = false;
     stats.timeLimit = settings.timeLimit;
     stats.reset();
 
-    // FIX #7: reset match-total accumulators
     matchTotalTyped   = 0;
     matchCorrectChars = 0;
     matchErrors       = 0;
@@ -31,11 +35,7 @@ void GameState::resetMatch() {
     typedText  = "";
 
     int oppAv = (profile.avatarId + 2) % 4;
-
-    // FIX #8: DO NOT apply Sentinel freeze here — apply it in GameScreen::onEnter
-    // so the 4-second freeze starts when the game screen appears, not during the
-    // VS countdown animation.
-    frozenUntil    = std::chrono::steady_clock::now(); // safe default (already expired)
+    frozenUntil = std::chrono::steady_clock::now(); // safe expired default
 
     if (mode == GameMode::VS) {
         opponent.reset(oppAv, false);
@@ -59,7 +59,6 @@ void GameState::updateMultiplier(bool correct) {
         if (comboStreak >= 10) {
             multiplier = std::min(multiplier + av.multiGainRate, av.maxMultiplier);
         }
-        // Phoenix round 3 bonus
         if (av.ability == AvatarAbility::Comeback && round == 3) {
             multiplier = std::min(multiplier + av.multiGainRate * 0.5f, av.maxMultiplier);
         }
@@ -69,7 +68,7 @@ void GameState::updateMultiplier(bool correct) {
             ? (float)stats.correctChars / stats.totalTyped * 100.f : 100.f;
         if (acc < av.accuracyThreshold) {
             if (av.ability == AvatarAbility::Volatile) {
-                multiplier = 1.f;
+                multiplier = 1.f; // Full reset for BLAZE
             } else {
                 multiplier = std::max(1.f, multiplier - 0.5f);
             }
