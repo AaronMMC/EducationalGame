@@ -28,8 +28,7 @@ enum class GameMode {
 struct PlayerProfile {
     std::string name    = "UNIT ALPHA";
     int avatarId        = 0;
-    int colorIndex      = 0;   // index into ACCENT_COLORS
-    // Persistent stats
+    int colorIndex      = 0;
     int gamesPlayed     = 0;
     int wins            = 0;
     int losses          = 0;
@@ -50,7 +49,7 @@ struct AppSettings {
 struct GameState {
     Screen       currentScreen = Screen::Title;
     GameMode     mode          = GameMode::None;
-    bool         selectingForMode = false; // avatar select context
+    bool         selectingForMode = false;
 
     PlayerProfile profile;
     AppSettings   settings;
@@ -69,19 +68,24 @@ struct GameState {
     bool         playerWon     = false;
     bool         isBossWave    = false;
 
+    // FIX #7: accumulate stats across all rounds so result screen shows match totals
+    int          matchTotalTyped   = 0;
+    int          matchCorrectChars = 0;
+    int          matchErrors       = 0;
+    int          matchBestWpm      = 0;
+
     // Typing
     std::string  targetText;
     std::string  typedText;
-    std::set<int> obfuscatedIndices; // indices sabotaged by Virus ability
+    std::set<int> obfuscatedIndices;
 
-    // Freeze (Sentinel ability) — time_point when freeze expires
+    // FIX #8: frozenUntil is set at round START (in GameScreen::onEnter), not resetMatch
     std::chrono::time_point<std::chrono::steady_clock> frozenUntil;
     bool         opponentFrozen = false;
 
     Stats        stats;
     NetworkSim   opponent;
 
-    // Fonts (loaded once in main)
     sf::Font     fontMono;
     sf::Font     fontOrb;
     sf::Font     fontRaj;

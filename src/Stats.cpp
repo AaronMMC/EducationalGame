@@ -2,11 +2,11 @@
 #include <algorithm>
 
 void Stats::start() {
-    startTime    = std::chrono::steady_clock::now();
-    isFinished   = false;
-    totalTyped   = 0;
-    errors       = 0;
-    correctChars = 0;
+    // FIX #1: Don't reset counters here — they are reset in reset().
+    // start() only kicks off the clock so the first typed char isn't lost.
+    startTime  = std::chrono::steady_clock::now();
+    isFinished = false;
+    isStarted  = true;
 }
 
 void Stats::finish() {
@@ -19,9 +19,12 @@ void Stats::reset() {
     errors       = 0;
     correctChars = 0;
     isFinished   = false;
+    isStarted    = false;
 }
 
 float Stats::getElapsedSeconds() {
+    // FIX #5: if never started, return 0 so getRemainingTime() == timeLimit
+    if (!isStarted) return 0.f;
     auto end = isFinished ? endTime : std::chrono::steady_clock::now();
     std::chrono::duration<float> elapsed = end - startTime;
     return elapsed.count();

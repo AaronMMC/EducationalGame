@@ -5,6 +5,10 @@ static const sf::Color COLORS[] = {
     {0,240,255},{255,60,110},{240,192,0},{123,47,255},{0,230,118},{255,145,0}
 };
 
+// FIX #13: single constant for color dot Y so handleEvent and draw always agree
+static constexpr float COLOR_DOT_Y    = 322.f;
+static constexpr float COLOR_DOT_SIZE = 10.f;  // radius
+
 void ProfileScreen::onEnter(GameState& gs) {
     nameBuffer  = gs.profile.name;
     nameFocused = false;
@@ -14,21 +18,22 @@ void ProfileScreen::handleEvent(sf::Event& event, GameState& gs) {
     if (event.type == sf::Event::MouseButtonPressed &&
         event.mouseButton.button == sf::Mouse::Left) {
         sf::Vector2i m(event.mouseButton.x, event.mouseButton.y);
-        // Back button
         if (m.x >= 300 && m.x <= 500 && m.y >= 530 && m.y <= 570)
             gs.currentScreen = Screen::Title;
-        // Name field
-        nameFocused = (m.x >= 40 && m.x <= 280 && m.y >= 330 && m.y <= 355);
-        // Color dots
+        nameFocused = (m.x >= 40 && m.x <= 280 && m.y >= 268 && m.y <= 296);
+
+        // FIX #13: use COLOR_DOT_Y constant so click region matches drawn position
         for (int i = 0; i < 6; ++i) {
             float cx = 40.f + i * 34.f;
-            if (m.x >= cx && m.x <= cx + 24 && m.y >= 380 && m.y <= 404)
+            float cy = COLOR_DOT_Y;
+            if (m.x >= cx && m.x <= cx + COLOR_DOT_SIZE * 2 &&
+                m.y >= cy && m.y <= cy + COLOR_DOT_SIZE * 2)
                 gs.profile.colorIndex = i;
         }
         // Avatar unit buttons
         for (int i = 0; i < 4; ++i) {
             float bx = 40.f + i * 56.f;
-            if (m.x >= bx && m.x <= bx + 46 && m.y >= 430 && m.y <= 472)
+            if (m.x >= bx && m.x <= bx + 46 && m.y >= 374 && m.y <= 414)
                 gs.profile.avatarId = i;
         }
     }
@@ -60,10 +65,8 @@ void ProfileScreen::draw(sf::RenderWindow& w, GameState& gs) {
     const Avatar& av = avatars[gs.profile.avatarId];
     sf::Color playerCol = COLORS[gs.profile.colorIndex % 6];
 
-    // LEFT panel — identity
     UI::drawPanel(w, 30, 90, 280, 410, sf::Color(playerCol.r,playerCol.g,playerCol.b,80), UI::BG2, 10.f);
 
-    // Avatar display
     sf::Text sym = UI::makeText(av.symbol, gs.fontMono, 36, playerCol);
     UI::centerText(sym, 170.f, 150.f);
     UI::drawGlowText(w, sym, playerCol, 5.f);
@@ -75,7 +78,6 @@ void ProfileScreen::draw(sf::RenderWindow& w, GameState& gs) {
     UI::centerText(avname, 170.f, 220.f);
     w.draw(avname);
 
-    // Name input
     sf::Text flbl = UI::makeText("CALLSIGN", gs.fontMono, 10, UI::TEXT2);
     flbl.setPosition(40, 252); w.draw(flbl);
     sf::RectangleShape field({220.f, 28.f});
@@ -88,12 +90,12 @@ void ProfileScreen::draw(sf::RenderWindow& w, GameState& gs) {
     sf::Text fnm = UI::makeText(display, gs.fontMono, 13, UI::TEXT);
     fnm.setPosition(46, 272); w.draw(fnm);
 
-    // Color picker
+    // FIX #13: draw dots at COLOR_DOT_Y
     sf::Text clbl = UI::makeText("ACCENT COLOR", gs.fontMono, 10, UI::TEXT2);
-    clbl.setPosition(40, 308); w.draw(clbl);
+    clbl.setPosition(40, COLOR_DOT_Y - 14.f); w.draw(clbl);
     for (int i = 0; i < 6; ++i) {
-        sf::CircleShape dot(10.f);
-        dot.setPosition(40.f + i * 34.f, 322.f);
+        sf::CircleShape dot(COLOR_DOT_SIZE);
+        dot.setPosition(40.f + i * 34.f, COLOR_DOT_Y);
         dot.setFillColor(COLORS[i]);
         if (i == gs.profile.colorIndex) {
             dot.setOutlineColor(sf::Color::White);
@@ -102,7 +104,6 @@ void ProfileScreen::draw(sf::RenderWindow& w, GameState& gs) {
         w.draw(dot);
     }
 
-    // Unit select
     sf::Text ulbl = UI::makeText("ACTIVE UNIT", gs.fontMono, 10, UI::TEXT2);
     ulbl.setPosition(40, 360); w.draw(ulbl);
     for (int i = 0; i < 4; ++i) {
@@ -120,7 +121,6 @@ void ProfileScreen::draw(sf::RenderWindow& w, GameState& gs) {
     }
 
     // RIGHT panels — stats
-    // Combat record
     UI::drawPanel(w, 330, 90, 220, 180, sf::Color(UI::ACCENT.r,UI::ACCENT.g,UI::ACCENT.b,50), UI::BG2, 8.f);
     sf::Text rlbl = UI::makeText("COMBAT RECORD", gs.fontOrb, 9, UI::TEXT2);
     rlbl.setPosition(342, 98); w.draw(rlbl);
@@ -139,7 +139,6 @@ void ProfileScreen::draw(sf::RenderWindow& w, GameState& gs) {
     int winRate = p.gamesPlayed > 0 ? p.wins * 100 / p.gamesPlayed : 0;
     statRow("WIN RATE", std::to_string(winRate)+"%", UI::ACCENT);
 
-    // Performance
     UI::drawPanel(w, 330, 284, 220, 180, sf::Color(UI::ACCENT3.r,UI::ACCENT3.g,UI::ACCENT3.b,30), UI::BG2, 8.f);
     sf::Text plbl = UI::makeText("PERFORMANCE", gs.fontOrb, 9, UI::TEXT2);
     plbl.setPosition(342, 292); w.draw(plbl);
@@ -149,7 +148,6 @@ void ProfileScreen::draw(sf::RenderWindow& w, GameState& gs) {
     statRow("AVG ACC",   std::to_string(p.avgAcc)+"%", UI::GREEN);
     statRow("ACTIVE",    av.symbol+" "+av.name.substr(0,6), av.accentColor);
 
-    // Back
     sf::Vector2i m = sf::Mouse::getPosition(w);
     bool hov = (m.x >= 300 && m.x <= 500 && m.y >= 530 && m.y <= 570);
     UI::drawPanel(w, 300, 530, 200, 40, hov ? UI::ACCENT2 : UI::TEXT2,

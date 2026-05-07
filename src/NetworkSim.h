@@ -31,10 +31,12 @@ public:
     void connect() { connected = true; }
 
 private:
-    bool connected = false;
-    float charsTyped = 0.f;
-    float virusTimer = 0.f;
-    float oppSpeed   = 0.f;     // chars per second
+    bool connected    = false;
+    float charsTyped  = 0.f;
+    float virusTimer  = 0.f;
+    float glitchTimer = 0.f;    // FIX #11: throttle glitch char re-rolls
+    float oppSpeed    = 0.f;    // chars per second
+    int   lastMilestone = 0;    // FIX #4: track chip-damage milestones
     std::chrono::time_point<std::chrono::steady_clock> startTime;
     bool started = false;
 };

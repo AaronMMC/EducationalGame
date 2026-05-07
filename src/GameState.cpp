@@ -20,19 +20,22 @@ void GameState::resetMatch() {
     stats.timeLimit = settings.timeLimit;
     stats.reset();
 
+    // FIX #7: reset match-total accumulators
+    matchTotalTyped   = 0;
+    matchCorrectChars = 0;
+    matchErrors       = 0;
+    matchBestWpm      = 0;
+
     auto snippets = isBossWave ? TextSnippets::boss() : TextSnippets::normal();
     targetText = TextSnippets::getRandom(snippets);
     typedText  = "";
 
-    // Setup opponent avatar
     int oppAv = (profile.avatarId + 2) % 4;
-    bool frozenStart = (profile.avatarId == 3); // Sentinel gives head start
-    if (frozenStart) {
-        frozenUntil = std::chrono::steady_clock::now() + std::chrono::seconds(4);
-        opponentFrozen = true;
-    } else {
-        frozenUntil = std::chrono::steady_clock::now();
-    }
+
+    // FIX #8: DO NOT apply Sentinel freeze here — apply it in GameScreen::onEnter
+    // so the 4-second freeze starts when the game screen appears, not during the
+    // VS countdown animation.
+    frozenUntil    = std::chrono::steady_clock::now(); // safe default (already expired)
 
     if (mode == GameMode::VS) {
         opponent.reset(oppAv, false);
@@ -66,7 +69,7 @@ void GameState::updateMultiplier(bool correct) {
             ? (float)stats.correctChars / stats.totalTyped * 100.f : 100.f;
         if (acc < av.accuracyThreshold) {
             if (av.ability == AvatarAbility::Volatile) {
-                multiplier = 1.f; // full reset for Blaze
+                multiplier = 1.f;
             } else {
                 multiplier = std::max(1.f, multiplier - 0.5f);
             }
